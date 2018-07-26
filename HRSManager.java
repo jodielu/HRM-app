@@ -52,6 +52,12 @@ public class HRSManager extends BleManager<HRSManagerCallbacks> {
 	private BluetoothGattCharacteristic mHRCharacteristic, mHRLocationCharacteristic;
 
 	private static HRSManager managerInstance = null;
+
+	//private long startTime;
+	//private long endTime;
+	//private long output;
+	//public long time = 0;
+	//public int counter = 0;
 	//File dest = new File(Environment.getExternalStorageDirectory(), fileName);
 	/**
 	 * singleton implementation of HRSManager class
@@ -125,11 +131,43 @@ public class HRSManager extends BleManager<HRSManagerCallbacks> {
 			Logger.a(mLogSession, "\"" + HeartRateMeasurementParser.parse(characteristic) + "\" received");
 
 			int hrValue;
+			int hrmValue;
+			int var;
+			int adc;
+
 			if (isHeartRateInUINT16(characteristic.getValue()[0])) {
 				hrValue = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 1);
+                var = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 3);
+                adc = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 5);
 			} else {
 				hrValue = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 1);
+                var = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 3);
+                adc = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 5);
 			}
+
+			int rebuilt32 = (hrValue << 16) | (var);
+			hrmValue = (int) (rebuilt32 * 0.149);
+
+
+			float adcRead;
+			float ADC12_BIT_MAX = 4096;
+
+			adcRead = (float) (adc * 3.3) / ADC12_BIT_MAX;
+
+			/*if (isHeartRateInUINT16(characteristic.getValue()[2])) {
+				var = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 3);
+			} else {
+				var = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 3);
+			}
+
+			if (isHeartRateInUINT16(characteristic.getValue()[3])) {
+				time = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 5);
+			} else {
+				time = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 5);
+			}*/
+
+
+
 
 			/*StringBuilder builder2 = new StringBuilder();
 			builder2.append("time: ").append(System.currentTimeMillis());
@@ -150,7 +188,7 @@ public class HRSManager extends BleManager<HRSManagerCallbacks> {
 			}*/
 
 			//This will send callback to HRSActivity when new HR value is received from HR device
-			mCallbacks.onHRValueReceived(gatt.getDevice(), hrValue);
+			mCallbacks.onHRValueReceived(gatt.getDevice(), hrmValue, adcRead);
 		}
 	};
 

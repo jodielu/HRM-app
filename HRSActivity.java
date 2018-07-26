@@ -72,7 +72,7 @@ public class HRSActivity extends BleProfileActivity implements HRSManagerCallbac
 
 	private final static int MAX_HR_VALUE = 100000000;
 	private final static int MIN_POSITIVE_VALUE = 0;
-	private final static int REFRESH_INTERVAL = 100; // 100 millisecond interval
+	private final static int REFRESH_INTERVAL = 10; // 10 millisecond interval
 
 	private Handler mHandler = new Handler();
 
@@ -84,10 +84,13 @@ public class HRSActivity extends BleProfileActivity implements HRSManagerCallbac
 
 	private int mHrmValue = 0;
 	private int mCounter = 0;
-	private long startTime;
+	private float adcSample = 0;
+	private float ADC12_BIT_MAX = 4096;
+	private long time = 0;
 	private long endTime;
 	private long output;
-	private String savedValues = "Time " + " Value";
+	private long elapsedTime;
+	private String savedValues = "Time " + " Value " + " Voltage";
 	private String fileName = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss'.txt'").format(new Date());
 
 
@@ -191,12 +194,14 @@ public class HRSActivity extends BleProfileActivity implements HRSManagerCallbac
 
 	void startShowGraph() {
 		isGraphInProgress = true;
+		//startTime = System.nanoTime();
+		time = 0;
 		mRepeatTask.run();
-		startTime = System.nanoTime();
 	}
 
 	void stopShowGraph() {
 		isGraphInProgress = false;
+		//saveHRMFile(fileName, savedValues);
 		mHandler.removeCallbacks(mRepeatTask);
 	}
 
@@ -243,20 +248,19 @@ public class HRSActivity extends BleProfileActivity implements HRSManagerCallbac
 	}
 
 	@Override
-	public void onHRValueReceived(final BluetoothDevice device, int value) {
+	public void onHRValueReceived(final BluetoothDevice device, int value, float adcRead) {
         mHrmValue = value;
         setHRSValueOnView(mHrmValue);
-        onHRValueDocumented(mHrmValue);
-		endTime = System.nanoTime();
-		output = (endTime - startTime) / 1000000;
+		String adcValue = adcRead + "V ";
+		String val = " " + time + " " + " " + mHrmValue + " " + " " + adcValue;
+		savedValues = savedValues + "\n" + val;
+		time = time + 10;
     }
 
-    public void onHRValueDocumented(int value) {
-		String milliseconds = output + "";
-		String mHrm = value + "";
-		String val = milliseconds + " " + mHrm;
-		savedValues = savedValues + "\n" + val;
-	}
+    /*@Override
+    public void readTime(long time) {
+		output = time;
+	}*/
 
 	public void saveHRMFile(String filename, String value) {
 		if (!isExternalStorageWritable()) {
@@ -304,6 +308,7 @@ public class HRSActivity extends BleProfileActivity implements HRSManagerCallbac
 			mHRSValue.setText(R.string.not_available_value);
 			mHRSPosition.setText(R.string.not_available);
 			saveHRMFile(fileName, savedValues);
+			time = 0;
 			stopShowGraph();
 		});
 	}
